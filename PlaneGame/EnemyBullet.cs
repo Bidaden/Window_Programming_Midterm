@@ -1,104 +1,76 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Drawing;
-using System.Windows.Forms;
 
 namespace Myplanegame
 {
-    public class EnemyBullet
+    public class EnemyBullet : Bullet
     {
-        private int x;
-        private int y;
-        private int distance;  
-        
-        static List<EnemyBullet> enbullist = new List<EnemyBullet>();//敌机子弹列表
-        Image enbul=Resource.en_bul01;
-        Point eloc;
-        double k;     //斜率
-        static Rectangle EnbulRect;
+        private readonly double slope;
 
-        //敌机子弹当前位置
-        public Point Eloc
+        // readonly: the list object never changes (items inside can change)
+        public static readonly List<EnemyBullet> enbullist = new List<EnemyBullet>();
+
+        // Constructor: base(ex, ey, speed) → Bullet → GameObject
+        public EnemyBullet(int ex, int ey, int bulletSpeed, int playerX, int playerY)
+            : base(ex, ey, bulletSpeed)
         {
-            get { return eloc; }
-            set { eloc = value; }
-        }
-       
-        public EnemyBullet(int ex,int ey,int dis,int player_x,int player_y)
-        {
-            x = ex;
-            y = ey;
-            distance = dis;
-            k = (1.0 * (player_x - x) / (1.0 * (player_y - y)));
-            Eloc = new Point(x, y);
+            image = Resource.en_bul01;
+            double dy = playerY - ey;
+            slope = (dy != 0) ? (1.0 * (playerX - ex) / dy) : 0;
         }
 
-        /// <summary>
-        /// 产生敌方子弹
-        /// </summary>
-        public static void ProduceEnbul()
+        // OVERRIDE Move() — enemy bullets go DOWNWARD (y increases)
+        public override void Move()
         {
-            for (int i = 0; i < Fighter.fighters.Count; i++)
+            y += speed;
+            x += (int)(speed * slope);
+            if (IsOutOfBounds()) isActive = false;
+        }
+
+        public override Rectangle GetBounds()
+        {
+            return new Rectangle(x, y, 6, 6);
+        }
+
+        // --- Static helpers ---
+
+        public static void ProduceEnbul(MyPlane plane)
+        {
+            Random rng = new Random();
+            for (int i = 0; i < EnemyPlane.fighters.Count; i++)
             {
-                if (new Random().Next(10, 20) == 10)
+                if (rng.Next(10, 20) == 10)
                 {
-                    EnemyBullet enbul = new EnemyBullet(Fighter.fighters[i].GetLoc().X + 15, Fighter.fighters[i].GetLoc().Y + 30, new Random().Next(10, 25), MyPlane.x, MyPlane.y);
-                    enbullist.Add(enbul);
-                }
-            }                
-        }
-
-        /// <summary>
-        /// 显示敌方子弹
-        /// </summary>
-        /// <param name="e"></param>
-        public void ShowEnbul(Graphics e)
-        {
-            e.DrawImage(enbul,Eloc);
-        }
-        
-        public void Move()
-        {
-            eloc.Y += distance;
-            eloc.X += (int)(distance * k);
-        }
-
-        /// <summary>
-        /// 敌方子弹移动
-        /// </summary>
-        /// <param name="e"></param>
-        public static void MoveEnbul(Graphics e)
-        {
-            for (int i = 0; i < enbullist.Count; i++)
-            {
-                enbullist[i].ShowEnbul(e);
-                enbullist[i].Move();
-                if (enbullist[i].Eloc.Y > 700 || enbullist[i].Eloc.X < 0 || enbullist[i].Eloc.X > 420)
-                {
-                    enbullist.Remove(enbullist[i]);
+                    enbullist.Add(new EnemyBullet(
+                        EnemyPlane.fighters[i].X + 15,
+                        EnemyPlane.fighters[i].Y + 30,
+                        rng.Next(10, 25),
+                        plane.X, plane.Y));
                 }
             }
-         
         }
-        /// <summary>
-        /// 我方飞机碰撞检测方法
-        /// </summary>
-        public static void HitPlane(Graphics g)
+
+        public static void MoveEnbul(Graphics g)
         {
-            for (int i = 0; i < enbullist.Count; i++)
+            for (int i = enbullist.Count - 1; i >= 0; i--)
             {
-                EnbulRect = new Rectangle(enbullist[i].Eloc.X, enbullist[i].Eloc.Y, 6, 6);
-                Rectangle MyplaneRect = new Rectangle(MyPlane.x,MyPlane.y, 40, 50);
-                if (EnbulRect.IntersectsWith(MyplaneRect)) //我方飞机被敌方子弹击中
+                enbullist[i].Move();
+                if (!enbullist[i].isActive)
+                    enbullist.RemoveAt(i);
+                else
+                    enbullist[i].Draw(g);
+            }
+        }
+
+        public static void HitPlane(MyPlane plane)
+        {
+            for (int i = enbullist.Count - 1; i >= 0; i--)
+            {
+                if (enbullist[i].CollidesWith(plane))
                 {
-                    enbullist.Remove(enbullist[i]);
-                    MyPlane.health -= 1;
-                    if (MyPlane.score > 0)
-                    {
-                        MyPlane.score -= 1;
-                    }
+                    enbullist.RemoveAt(i);
+                    plane.TakeDamage(1);
                 }
             }
         }

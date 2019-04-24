@@ -1,19 +1,16 @@
-﻿using System.Data;
-using System.Drawing;
-using System.Linq;
+﻿using System;
 using System.Windows.Forms;
-using System;
 
 namespace Myplanegame
 {
     public partial class Program
     {
+        [STAThread]
         static void Main()
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new GameForm());
-
         }
     }
 }

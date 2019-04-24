@@ -1,163 +1,105 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Drawing;
 using System.Windows.Forms;
-using System.Media;
 
 namespace Myplanegame
 {
-    public class MyBullet
+ 
+    public class MyBullet : Bullet
     {
-        private int x;//子弹横坐标
-        private int y;//子弹纵坐标
-        private const int BULLET_OFFSET = 18;//移动速度
-        public int Angle;//子弹角度
-        private Image bulImg;//定义子弹图片
+        private const int BULLET_SPEED = 18;
         private const double PI = Math.PI;
-        public static List<MyBullet> mybulList = new List<MyBullet>();//子弹对象集合
 
-        static Bitmap bm = new Bitmap(Resource.bomb4);//爆炸图片
-        public bool isHit = false;//碰撞的标志
-        public MyBullet()
-        { 
+        public int Angle { get; private set; }
+
+        // readonly: the list object never changes (items inside can change)
+        public static readonly List<MyBullet> mybulList = new List<MyBullet>();
+
+        // Constructor: base(bx, by, 18) → Bullet(bx,by,18) → GameObject(bx,by)
+        public MyBullet(int bx, int by, int angle)
+            : base(bx, by, BULLET_SPEED)
+        {
+            Angle = angle;
+            SetImageAndOffset(angle);
         }
 
-         public MyBullet(int bx, int by, int angle)
+        private void SetImageAndOffset(int angle)
         {
-            x = bx;
-            y = by;
-            Angle = angle;
+            switch (angle)
+            {
+                case 0: image = Resource.bul02; y -= 17; break;
+                case 30: image = Resource.bul02_30; x += 12; y -= 12; break;
+                case 60: image = Resource.bul02_60; x += 2; y -= 17; break;
+                case 120: image = Resource.bul02_120; x -= 35; y -= 12; break;
+                case 150: image = Resource.bul02_150; x -= 20; y -= 12; break;
+            }
+        }
+
+        // OVERRIDE Move() — player bullets go UPWARD (y decreases)
+        // EnemyBullet.Move() goes DOWNWARD (y increases) — polymorphism
+        public override void Move()
+        {
             switch (Angle)
             {
-                case 0:
-                    bulImg = Resource.bul02;
-                    y -= 17;
-                    break;
-                case 30:
-                    bulImg = Resource.bul02_30;
-                    x += 12;
-                    y -= 12;
-                    break;
-                case 60:
-                    bulImg = Resource.bul02_60;
-                    x += 2;
-                    y -= 17;
-                    break;
-                case 120:
-                    bulImg = Resource.bul02_120;
-                    x -= 35;
-                    y -= 12;
-                    break;
-                case 150:
-                    bulImg = Resource.bul02_150;
-                    x -= 20;
-                    y -= 12;
-                    break;
-                default:
-                    break;
+                case 0: y -= speed; break;
+                case 60: x += (int)(speed / 2.0); y -= (int)(speed * Math.Cos(PI / 6)); break;
+                case 30: x += (int)(speed * Math.Cos(PI / 6)); y -= (int)(speed / 2.0); break;
+                case 120: x -= (int)(speed / 2.0); y -= (int)(speed * Math.Cos(PI / 6)); break;
+                case 150: x -= (int)(speed * Math.Cos(PI / 6)); y -= (int)(speed / 2.0); break;
             }
+            if (IsOutOfBounds()) isActive = false;
         }
 
-        /// <summary>
-        /// 通过按键盘J键来产生我方子弹
-        /// </summary>
-        public static void ProduceMybul()
+        // --- Static helpers ---
+
+        public static void ProduceMybul(MyPlane plane)
         {
-            if (!MyPlane.isGameOver && MyPlane.IsKeyDown(Keys.J))
+            if (MyPlane.isGameOver) return;
+            if (!MyPlane.IsKeyDown(Keys.J)) return;
+
+            mybulList.Add(new MyBullet(plane.X + 13, plane.Y - 10, 0));
+            if (plane.isGetGun)
             {
-                mybulList.Add(new MyBullet(MyPlane.x + 13, MyPlane.y - 10, 0));
-                if (MyPlane.isGetGun)
-                {
-                    mybulList.Add(new MyBullet(MyPlane.x + 13, MyPlane.y - 8, 60));
-                    mybulList.Add(new MyBullet(MyPlane.x + 7, MyPlane.y - 8, 30));
-                    mybulList.Add(new MyBullet(MyPlane.x + 30, MyPlane.y - 12, 120));
-                    mybulList.Add(new MyBullet(MyPlane.x, MyPlane.y - 7, 150));
-                }
+                mybulList.Add(new MyBullet(plane.X + 13, plane.Y - 8, 60));
+                mybulList.Add(new MyBullet(plane.X + 7, plane.Y - 8, 30));
+                mybulList.Add(new MyBullet(plane.X + 30, plane.Y - 12, 120));
+                mybulList.Add(new MyBullet(plane.X, plane.Y - 7, 150));
             }
         }
 
-        /// <summary>
-        /// 显示我方子弹
-        /// </summary>
-        /// <param name="e"></param>
-        public void ShowMybul(Graphics e)
-        {
-            e.DrawImage(bulImg, new Point(x, y));
-        }
-       
-        /// <summary>
-        /// 我方子弹移动
-        /// </summary>
-        /// <param name="g"></param>
         public static void MoveMybul(Graphics g)
         {
-            for(int i = 0;i < mybulList.Count; i++)
+            for (int i = mybulList.Count - 1; i >= 0; i--)
             {
-                mybulList[i].ShowMybul(g);
-                switch (mybulList[i].Angle)
-                {
-                    case 0:
-                        mybulList[i].y -= BULLET_OFFSET;
-                        break;
-                    case 60:
-                        mybulList[i].x += (int)(BULLET_OFFSET / 2);
-                        mybulList[i].y -= (int)(BULLET_OFFSET * Math.Cos(PI / 6));
-                        break;
-                    case 30:
-                        mybulList[i].x += (int)(BULLET_OFFSET * Math.Cos(PI / 6));
-                        mybulList[i].y -= (int)(BULLET_OFFSET / 2);
-                        break;
-                    case 120:
-                        mybulList[i].x -= (int)(BULLET_OFFSET / 2);
-                        mybulList[i].y -= (int)(BULLET_OFFSET * Math.Cos(PI / 6));
-                        break;
-                    case 150:
-                        mybulList[i].x -= (int)(BULLET_OFFSET * Math.Cos(PI / 6));
-                        mybulList[i].y -= (int)(BULLET_OFFSET / 2);
-                        break;
-                }
-                if (mybulList[i].y < 0 || mybulList[i].x > 415 || mybulList[i].x < 0)
-                {
-                    mybulList.Remove(mybulList[i]);
-                }
+                mybulList[i].Move();
+                if (!mybulList[i].isActive)
+                    mybulList.RemoveAt(i);
+                else
+                    mybulList[i].Draw(g);
             }
         }
-        
-        /// <summary>
-        /// 敌机碰撞检测方法
-        /// </summary>
-         public static void IsHitEnemy(Graphics g)
+
+        public static void IsHitEnemy(MyPlane plane)
         {
-            Rectangle myPlaneRect = new Rectangle(MyPlane.x, MyPlane.y, MyPlane.myPlaneImg.Width, MyPlane.myPlaneImg.Height);    //包住myplane的Rectangle
-
-            //g.DrawRectangle(new Pen(Color.Red), myPlaneRect);
-            for(int i = 0; i < mybulList.Count; i++)
-              for (int j = 0; j < Fighter.fighters.Count; j++)
-              { 
-                  Rectangle mybulRect = new Rectangle(mybulList[i].x, mybulList[i].y, 8, 10);
-                  Rectangle fighterRect = new Rectangle(Fighter.fighters[j]._x, Fighter.fighters[j]._y, 65, 45);
-                  //g.DrawRectangle(new Pen(Color.Black), fighterRect);
-                  if (mybulRect.IntersectsWith(fighterRect))   //我方子弹击中敌机，敌机爆炸
-                  {
-                     mybulList.Remove(mybulList[i]);
-                     Fighter.fighters[j].flag = true;
-                     if (MyPlane.score < 100)
-                     {
-                         MyPlane.score += 1;
-                     }
-                  }
-                  else if (myPlaneRect.IntersectsWith(fighterRect))  //我方飞机撞上敌机，敌机爆炸
-                  {
-                      Fighter.fighters[j].flag = true;
-                      if (MyPlane.score < 100)
-                      {
-                          MyPlane.score += 1;
-                      }
-                  }
-             }
-
+            for (int i = mybulList.Count - 1; i >= 0; i--)
+            {
+                for (int j = EnemyPlane.fighters.Count - 1; j >= 0; j--)
+                {
+                    if (mybulList[i].CollidesWith(EnemyPlane.fighters[j]))
+                    {
+                        mybulList.RemoveAt(i);
+                        EnemyPlane.fighters[j].TakeDamage(1);
+                        if (plane.score < 100) plane.score += 1;
+                        break;
+                    }
+                    else if (plane.CollidesWith(EnemyPlane.fighters[j]))
+                    {
+                        EnemyPlane.fighters[j].TakeDamage(1);
+                        if (plane.score < 100) plane.score += 1;
+                    }
+                }
+            }
         }
     }
 }

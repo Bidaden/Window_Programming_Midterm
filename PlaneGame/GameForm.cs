@@ -1,195 +1,167 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
-using System.Threading;
 using System.Media;
-using System.IO; 
-using System.Runtime.InteropServices;
+using System.Windows.Forms;
 
+// Suppress naming warnings for timer event handlers.
+// These names (timer1_Tick, timer2_Tick) are hardwired in GameForm.Designer.cs
+// and CANNOT be renamed — doing so would break the timer connection.
+#pragma warning disable IDE1006
 
 namespace Myplanegame
 {
-    public partial class GameForm : Form     //继承类
+    public partial class GameForm : Form
     {
-        private const int PLANE_OFFSET = 2;       //设置每次定时器触发时图片发生偏移的速度
-        
-        private int pix_x = 0;
-        private int pix_y = 0;         //背景图片移动起始的坐标
-        int shot_y = 10;
-        int blood_y = 50;
-        private Image[] bgrounds;        //设置多张背景图片，每次运行程序随机产生背景图片
-        int index = 0;                           //背景图片索引
-        Image avatar = Resource.imgHeadSheep;     //角色头像图片
-        Image boomImg = Resource.bomb4;          //爆炸效果图片
-        Image shotImg = Resource.shotgun;
-        Image bloodImg = Resource.bloodbox;
+        private const int BG_SPEED = 2;
 
-        bool isDropGun = false;      //是否产生shotgun的标志
-        bool isDropBox = false;       //是否产生bloodbox的标志
+        // These change every frame — cannot be readonly
+        private int pix_y = 0;
+        private int shot_y = 10;
+        private int blood_y = 50;
+        private bool isDropGun = false;
+        private bool isDropBox = false;
+        private int bgIndex = 0;
 
-        private void Form1_Load(object sender, EventArgs e)//窗体加载事件
-        {
-            InitBackground();              //初始化背景
-        }
+        // readonly: assigned once in constructor, never reassigned
+        private readonly Image[] bgrounds = new Image[4];
+        private readonly Image avatarImg;
+        private readonly Image boomImg;
+        private readonly Image shotImg;
+        private readonly Image bloodImg;
+        private readonly MyPlane plane;
 
         public GameForm()
         {
             InitializeComponent();
-            this.Size = new Size(420, 630);//让窗体与图片一样大
-            //this.DoubleBuffered = true; //双缓冲区
-        }
-         ///<summary>
-        /// 初始化背景，随机生成背景图片
-        /// </summary>
-        public void InitBackground()
-        {
-            bgrounds = new Image[4];
-            Random rd = new Random();
-            index = rd.Next(0, 4);//产生0-3的随机数，表示不同背景
+            this.Size = new Size(420, 630);
 
-            bgrounds[0] = Resource.background1;//从资源获取图片
+            avatarImg = Resource.imgHeadSheep;
+            boomImg = Resource.bomb4;
+            shotImg = Resource.shotgun;
+            bloodImg = Resource.bloodbox;
+            plane = new MyPlane();
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            bgrounds[0] = Resource.background1;
             bgrounds[1] = Resource.background2;
             bgrounds[2] = Resource.background3;
             bgrounds[3] = Resource.background4;
-        }
-        
-        /// <summary>
-        /// 建立背景移动函数
-        /// </summary>
-        /// <param name="e">图形对象</param>
-        public void BackMove(Graphics e)//通过定时位置让图片发生偏移，防止有空白
-        {
-            e = this.CreateGraphics();
-            pix_y += PLANE_OFFSET;
-            if (pix_y > 630)
-            {
-                pix_y = 0;
-            }
+            bgIndex = new Random().Next(0, 4);
         }
 
-        /// <summary>
-        /// 随机产生shotgun
-        /// </summary>
-        public void ProduceShotGun()
+        private void DrawGame(Graphics g)
         {
-            Rectangle sgRect = new Rectangle(new Random().Next(0, 350), shot_y, shotImg.Width, shotImg.Height);      //包住shotgun的Rectangle
-            Rectangle mpRect = new Rectangle(MyPlane.x, MyPlane.y, MyPlane.myPlaneImg.Width, MyPlane.myPlaneImg.Height);    //包住myplane的Rectangle
+            // --- Scrolling background ---
+            pix_y += BG_SPEED;
+            if (pix_y > 630) pix_y = 0;
+            g.DrawImage(bgrounds[bgIndex], 0, pix_y, 420, 630);
+            g.DrawImage(bgrounds[bgIndex], 0, pix_y - 630, 420, 630);
 
-            if (new Random().Next(0, 100) == 2)     //随机产生shotgun
-            {
-                isDropGun = true;
-            }
-            if (isDropGun && !MyPlane.isGetGun && sgRect.IntersectsWith(mpRect)) //已经得到shotgun
-            {
-                MyPlane.isGetGun = true;
-                shot_y = -100;
-            }
-            shot_y += 5;
-            if (shot_y > 950)
-            {
-                shot_y = -100;
-            }
+            // --- HUD ---
+            g.DrawImage(avatarImg, 10, 10);
+            g.DrawRectangle(new Pen(Color.Black), new Rectangle(10, 100, 100, 10));
+            g.FillRectangle(Brushes.Red, 10, 101, plane.health, 9);
+            g.DrawRectangle(new Pen(Color.Blue), new Rectangle(10, 120, 100, 10));
+            g.FillRectangle(Brushes.Green, 11, 121, plane.score, 9);
+            g.DrawString("Player: Bi", new Font("Arial", 9, FontStyle.Bold), Brushes.Yellow, new System.Drawing.Point(10, 140));
+            g.DrawString("Score: " + plane.score, new Font("Arial", 9, FontStyle.Bold), Brushes.Yellow, new System.Drawing.Point(10, 160));
+
+            // --- Player plane ---
+            plane.Move();
+            plane.Draw(g);
+
+            // --- Player bullets ---
+            MyBullet.ProduceMybul(plane);
+            MyBullet.MoveMybul(g);
+            MyBullet.IsHitEnemy(plane);
+
+            // --- Enemy planes (EnemyPlane — sibling of MyPlane under Plane) ---
+            EnemyPlane.ProduceFighter();
+            EnemyPlane.FighterMove(g);
+
+            // --- Enemy bullets ---
+            EnemyBullet.ProduceEnbul(plane);
+            EnemyBullet.MoveEnbul(g);
+            EnemyBullet.HitPlane(plane);
+
+            // --- Power-ups ---
+            ProduceShotGun();
+            ProduceBlood();
+
+            if (isDropGun && !plane.isGetGun)
+                g.DrawImage(shotImg, 200, shot_y);
+            if (isDropBox && !plane.isGetBlood)
+                g.DrawImage(bloodImg, 350, blood_y);
         }
-        /// <summary>
-        /// 随机产生bloodbox
-        /// </summary>
-        public void ProduceBlood()
-        {
-            Rectangle mpRect = new Rectangle(MyPlane.x, MyPlane.y, MyPlane.myPlaneImg.Width, MyPlane.myPlaneImg.Height);    //包住myplane的Rectangle
-            Rectangle bbRect = new Rectangle(new Random().Next(0, 390), blood_y, bloodImg.Width, bloodImg.Height);     //包住bloodbox的Rectangle
 
-            if (new Random().Next(0, 100) == 0)        //随机产生bloodbox
+        private void ProduceShotGun()
+        {
+            if (new Random().Next(0, 100) == 2) isDropGun = true;
+
+            if (isDropGun && !plane.isGetGun)
             {
-                isDropBox = true;
-            }
-            if (isDropBox && !MyPlane.isGetBlood)
-            {
-                if (bbRect.IntersectsWith(mpRect))
+                var sgRect = new Rectangle(200, shot_y, shotImg.Width, shotImg.Height);
+                if (sgRect.IntersectsWith(plane.GetBounds()))
                 {
-                    MyPlane.isGetBlood = true;
+                    plane.isGetGun = true;
+                    shot_y = -100;
+                }
+                shot_y += 5;
+                if (shot_y > 950) shot_y = -100;
+            }
+        }
+
+        private void ProduceBlood()
+        {
+            if (new Random().Next(0, 100) == 0) isDropBox = true;
+
+            if (isDropBox && !plane.isGetBlood)
+            {
+                var bbRect = new Rectangle(350, blood_y, bloodImg.Width, bloodImg.Height);
+                if (bbRect.IntersectsWith(plane.GetBounds()))
+                {
+                    plane.isGetBlood = true;
+                    if (plane.health <= 90) plane.health += 10;
                     blood_y = -100;
                 }
+                blood_y += 5;
+                if (blood_y > 950) blood_y = -100;
             }
         }
 
-        /// <summary>
-        /// 绘制游戏界面
-        /// </summary>
-        /// <param name="g"></param>
-        private void DrawGame(Graphics g)                    //绘制界面上所有图像，避免闪烁
+        protected override void OnPaint(PaintEventArgs e)
         {
-            this.BackMove(g);               
-            g.DrawImage(bgrounds[index], pix_x, pix_y, 420, 630);           
-            g.DrawImage(bgrounds[index], pix_x, pix_y - 630, 420, 630);       //绘制背景
-
-            g.DrawImage(avatar, 10, 10);                                            //绘制角色头像
-            g.DrawRectangle(new Pen(Color.Black), new Rectangle(10, 100, 100, 10));     //绘制血条矩形
-            g.FillRectangle(Brushes.Red, 10, 101, MyPlane.health, 9);                   //填充血条矩形
-
-            g.DrawRectangle(new Pen(Color.Blue), new Rectangle(10, 120, 100, 10));
-            g.FillRectangle(Brushes.Green, 11, 121, MyPlane.score, 9);
-            g.DrawString("Player：xjc", new Font("宋体", 9, FontStyle.Bold), Brushes.Yellow, new Point(10, 140));      //显示玩家
-            g.DrawString("Score：" + MyPlane.score, new Font("宋体", 9, FontStyle.Bold), Brushes.Yellow, new Point(10, 160));      //显示分数
-
-            MyPlane.MyPlaneShow(g);
-            MyPlane.MyPlaneMove();
-
-            MyBullet.ProduceMybul();
-            MyBullet.MoveMybul(g);
-            MyBullet.IsHitEnemy(g);
-
-            Fighter.ProduceFighter();
-            Fighter.FighterMove(g);
-
-            EnemyBullet.ProduceEnbul();
-            EnemyBullet.MoveEnbul(g);
-            EnemyBullet.HitPlane(g);
-
-            this.ProduceShotGun();
-            this.ProduceBlood();
-
-            if (isDropGun && !MyPlane.isGetGun)          //判断是否产生shotgun,并绘制
-            {
-                g.DrawImage(shotImg, 200, shot_y);
-            }
-            if (MyPlane.isGetGun)
-            {
-                g.DrawImage(shotImg, new Point(0, -500));
-            }
-
-            if (isDropBox && !MyPlane.isGetBlood)         //判断是否产生bloodbox,并绘制
-            {
-                g.DrawImage(bloodImg, 350, blood_y);
-            }
-            if (MyPlane.isGetBlood)
-            {
-                g.DrawImage(bloodImg, new Point(0, -500));
-            }
-        }
-
-        protected override void OnPaint(PaintEventArgs e) //先将图像绘制到Bitmap图片中，再加载这个图片，以减少图像闪烁
-        {
-            Bitmap bufferBmp = new Bitmap(this.ClientRectangle.Width-1, this.ClientRectangle.Height-1);
-            Graphics g = Graphics.FromImage((System.Drawing.Image)bufferBmp);
-            this.DrawGame(g);
-
-            //将要绘制的内容先绘制到g上
-            e.Graphics.DrawImage(bufferBmp, 0, 0);
-            g.Dispose();
+            Bitmap buffer = new Bitmap(
+                this.ClientRectangle.Width - 1,
+                this.ClientRectangle.Height - 1);
+            using (Graphics g = Graphics.FromImage(buffer))
+                DrawGame(g);
+            e.Graphics.DrawImage(buffer, 0, 0);
             base.OnPaint(e);
         }
 
-        /// <summary>
-        /// 设置定时器1事件
-        /// </summary>
+        // These names MUST match GameForm.Designer.cs exactly — do not rename.
         private void timer1_Tick(object sender, EventArgs e)
         {
-            this.Invalidate();  //使当前窗口无效，系统自动调用OnPaint()函数重绘
+            this.Invalidate();
+        }
+
+        private void timer2_Tick(object sender, EventArgs e)
+        {
+            using (Graphics g = this.CreateGraphics())
+            {
+                for (int j = EnemyPlane.fighters.Count - 1; j >= 0; j--)
+                {
+                    if (EnemyPlane.fighters[j].flag)
+                    {
+                        g.DrawImage(boomImg, EnemyPlane.fighters[j].GetLoc());
+                        new SoundPlayer(Resource.BOMB21).Play();
+                        EnemyPlane.fighters.RemoveAt(j);
+                    }
+                }
+            }
         }
 
         private void Form1_KeyDown(object sender, KeyEventArgs e)
@@ -198,27 +170,11 @@ namespace Myplanegame
         }
 
         private void Form1_KeyUp(object sender, KeyEventArgs e)
-        { 
-            MyPlane.Keyup(e.KeyCode);
-            MyPlane.myPlaneImg = Resource.plane;
-        }
-
-        /// <summary>
-        /// 设置定时器2事件
-        /// </summary>
-        private void timer2_Tick(object sender, EventArgs e)
         {
-            Graphics g = this.CreateGraphics();
-            for (int j = 0; j < Fighter.fighters.Count; j++)
-            {
-                if (Fighter.fighters[j].flag)
-                {
-                    g.DrawImage(boomImg, Fighter.fighters[j].GetLoc());
-                    SoundPlayer music = new SoundPlayer(Resource.BOMB21);
-                    music.Play(); 
-                    Fighter.fighters.Remove(Fighter.fighters[j]);
-                }
-            }
+            MyPlane.Keyup(e.KeyCode);
+            plane.ResetImage();   // public method — no direct access to protected 'image'
         }
     }
 }
+
+#pragma warning restore IDE1006
