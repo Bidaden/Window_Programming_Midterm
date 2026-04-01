@@ -40,12 +40,12 @@ namespace Myplanegame
             Random rng = new Random();
             for (int i = 0; i < EnemyPlane.fighters.Count; i++)
             {
-                if (rng.Next(10, 20) == 10)
+                if (rng.Next(0, 80) == 0)
                 {
                     enbullist.Add(new EnemyBullet(
                         EnemyPlane.fighters[i].X + 15,
                         EnemyPlane.fighters[i].Y + 30,
-                        rng.Next(10, 25),
+                        rng.Next(3, 7),
                         plane.X, plane.Y));
                 }
             }

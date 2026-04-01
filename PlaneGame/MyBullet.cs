@@ -8,7 +8,8 @@ namespace Myplanegame
  
     public class MyBullet : Bullet
     {
-        private const int BULLET_SPEED = 18;
+        private const int BULLET_SPEED = 3;
+        private static int fireCounter = 0;
         private const double PI = Math.PI;
 
         public int Angle { get; private set; }
@@ -56,15 +57,17 @@ namespace Myplanegame
         public static void ProduceMybul(MyPlane plane)
         {
             if (MyPlane.isGameOver) return;
-            if (!MyPlane.IsKeyDown(Keys.J)) return;
+
+            fireCounter++;
+            if (fireCounter < 20) return;   // fire once every 10 ticks
+            fireCounter = 0;
 
             mybulList.Add(new MyBullet(plane.X + 13, plane.Y - 10, 0));
+
             if (plane.isGetGun)
             {
-                mybulList.Add(new MyBullet(plane.X + 13, plane.Y - 8, 60));
                 mybulList.Add(new MyBullet(plane.X + 7, plane.Y - 8, 30));
                 mybulList.Add(new MyBullet(plane.X + 30, plane.Y - 12, 120));
-                mybulList.Add(new MyBullet(plane.X, plane.Y - 7, 150));
             }
         }
 

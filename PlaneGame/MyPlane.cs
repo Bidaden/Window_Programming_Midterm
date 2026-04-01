@@ -13,7 +13,7 @@ namespace Myplanegame
         public bool isGetBlood = false;
         public static bool isGameOver = false;
 
-        private const int SPEED = 12;
+        private const int SPEED = 4;
 
         // readonly: assigned once in constructor, never reassigned
         private readonly Image imgNormal;
@@ -28,8 +28,8 @@ namespace Myplanegame
         public MyPlane() : base(180, 530, 100)
         {
             imgNormal = Resource.plane;
-            imgLeft = Resource.planeLeft;
-            imgRight = Resource.planeRight;
+            imgLeft = Resource.plane;
+            imgRight = Resource.plane;
             imgGameOver = Resource.gameover;
             image = imgNormal;    // 'image' inherited from GameObject
         }

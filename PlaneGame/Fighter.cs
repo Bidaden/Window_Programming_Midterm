@@ -9,7 +9,7 @@ namespace Myplanegame
     {
         public bool flag = false;
 
-        private const int ENEMY_SPEED = 4;
+        private const int ENEMY_SPEED = 2;
 
         // readonly: the list object never changes (items inside can change)
         public static readonly List<EnemyPlane> fighters = new List<EnemyPlane>();

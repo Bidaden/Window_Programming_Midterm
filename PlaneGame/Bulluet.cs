@@ -2,15 +2,7 @@
 
 namespace Myplanegame
 {
-    // =============================================================
-    //  SUBCLASS of GameObject — Level 2
-    //  PARENT of MyBullet and EnemyBullet — Level 2 → 3
-    //
-    //  Holds what BOTH bullet types share:
-    //    - speed (readonly)
-    //    - Draw() — draw image at position
-    //    - IsOutOfBounds() — check if bullet left the screen
-    // =============================================================
+   
     public abstract class Bullet : GameObject
     {
         protected readonly int speed;
