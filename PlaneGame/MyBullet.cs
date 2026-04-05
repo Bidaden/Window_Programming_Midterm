@@ -32,7 +32,7 @@ namespace Myplanegame
                 case 0: image = Resource.bul02; y -= 17; break;
                 case 30: image = Resource.bul02_30; x += 12; y -= 12; break;
                 case 60: image = Resource.bul02_60; x += 2; y -= 17; break;
-                case 120: image = Resource.bul02_120; x -= 35; y -= 12; break;
+                case 120: image = Resource.bul02_120; x -= 10; y -= 12; break;
                 case 150: image = Resource.bul02_150; x -= 20; y -= 12; break;
             }
         }
@@ -66,8 +66,8 @@ namespace Myplanegame
 
             if (plane.isGetGun)
             {
-                mybulList.Add(new MyBullet(plane.X + 7, plane.Y - 8, 30));
-                mybulList.Add(new MyBullet(plane.X + 30, plane.Y - 12, 120));
+                mybulList.Add(new MyBullet(plane.X + 35, plane.Y - 8, 60));
+                mybulList.Add(new MyBullet(plane.X + 25, plane.Y - 12, 120));
             }
         }
 
