@@ -62,7 +62,7 @@ namespace Myplanegame
             if (fireCounter < 20) return;   // fire once every 10 ticks
             fireCounter = 0;
 
-            mybulList.Add(new MyBullet(plane.X + 13, plane.Y - 10, 0));
+            mybulList.Add(new MyBullet(plane.X + 35, plane.Y - 10, 0));
 
             if (plane.isGetGun)
             {

@@ -323,7 +323,6 @@ namespace Myplanegame
             // Controls
             string[] controls = {
                 "W A S D  —  Move",
-                "J        —  Shoot",
                 "Click    —  Fullscreen / toggle",
                 "Escape   —  Exit fullscreen"
             };
